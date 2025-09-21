@@ -9,7 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image, ImageTk
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# SECTION 1: CORE IMAGE PROCESSING (Unchanged)
+# SECTION 1: CORE IMAGE PROCESSING (Functionality Corrected Again)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def skeletonize_image(image):
@@ -42,15 +42,27 @@ def preprocess_and_extract_path(image_path, lower_bound, upper_bound):
         img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_bound, upper_bound)
+
+    # --- FIX STARTS HERE ---
+    # The previous MORPH_OPEN was too destructive. The original MORPH_CLOSE was too aggressive.
+    # This is the correct balance: A MORPH_CLOSE operation with a small number of
+    # iterations. It's strong enough to fill gaps in the line but not so strong
+    # that it creates a giant blob.
     kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=7)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=3)
+    # --- FIX ENDS HERE ---
+
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours: return cv2.imread(image_path), None, mask, scale_factor
     largest_contour = max(contours, key=cv2.contourArea)
     clean_mask = np.zeros(mask.shape, np.uint8)
     cv2.drawContours(clean_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
+
+    # A single erosion pass is sufficient to thin the line for skeletonization.
+    # The previous value of 2 was also too destructive.
     erosion_kernel = np.ones((3,3), np.uint8)
     eroded_mask = cv2.erode(clean_mask, erosion_kernel, iterations=1)
+
     skeleton = skeletonize_image(eroded_mask)
     rows, cols = np.where(skeleton > 0)
     if len(rows) < 2: return cv2.imread(image_path), None, skeleton, scale_factor
@@ -174,7 +186,7 @@ class InteractiveSlopeWindow(tk.Toplevel):
         self.canvas.draw_idle()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# SECTION 3: THE MAIN APPLICATION
+# SECTION 3: THE MAIN APPLICATION (Unchanged)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class PathAnalyzerApp:
