@@ -2,11 +2,13 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter.ttk import PanedWindow
 import cv2
+import heapq
 import numpy as np
 from scipy.interpolate import splprep, splev
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image, ImageTk
+import csv
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # SECTION 1: CORE IMAGE PROCESSING (Unchanged)
@@ -110,6 +112,9 @@ class ColorTunerWindow(tk.Toplevel):
         lower = np.array([self.h_min.get(), self.s_min.get(), self.v_min.get()]); upper = np.array([self.h_max.get(), self.s_max.get(), self.v_max.get()])
         self.on_apply_callback(lower, upper); self.destroy()
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# SECTION 2.5: INTERACTIVE SLOPE WINDOW (MODIFIED)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class InteractiveSlopeWindow(tk.Toplevel):
     def __init__(self, parent, original_cv_image, path_points, tck, u_params):
         super().__init__(parent)
@@ -128,7 +133,7 @@ class InteractiveSlopeWindow(tk.Toplevel):
         self.fig_math = Figure(); self.ax_math = self.fig_math.add_subplot(111)
         self.canvas_math = FigureCanvasTkAgg(self.fig_math, master=math_plot_frame); self.canvas_math.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         data_frame = tk.Frame(controls_frame); data_frame.pack(side=tk.LEFT, padx=(0, 20))
-        self.slope_var = tk.StringVar(value="Slope (dy/dx): -"); self.int_slope_var = tk.StringVar(value="Integer Slope: -"); self.angle_var = tk.StringVar(value="Angle: -")
+        self.slope_var = tk.StringVar(value="Slope: -"); self.int_slope_var = tk.StringVar(value="Integer Slope: -"); self.angle_var = tk.StringVar(value="Angle: -")
         tk.Label(data_frame, textvariable=self.slope_var, font=("Helvetica", 11)).pack(anchor="w")
         tk.Label(data_frame, textvariable=self.int_slope_var, font=("Helvetica", 11)).pack(anchor="w")
         tk.Label(data_frame, textvariable=self.angle_var, font=("Helvetica", 11)).pack(anchor="w")
@@ -146,10 +151,10 @@ class InteractiveSlopeWindow(tk.Toplevel):
         self.ax_img.set_title("Image Overlay View"); self.ax_img.axis('off'); self.fig_img.tight_layout()
         if self.is_math_plot_rotated:
             self.ax_math.plot(self.path_points[:, 1], self.path_points[:, 0], color='red', linewidth=2)
-            self.ax_math.set_xlabel("Secondary Axis (pixels)"); self.ax_math.set_ylabel("Primary Axis (pixels)")
+            self.ax_math.set_xlabel("Primary Axis (Y pixels)"); self.ax_math.set_ylabel("Secondary Axis (X pixels)")
         else:
             self.ax_math.plot(self.path_points[:, 0], self.path_points[:, 1], color='red', linewidth=2)
-            self.ax_math.set_xlabel("Primary Axis (pixels)"); self.ax_math.set_ylabel("Secondary Axis (pixels)")
+            self.ax_math.set_xlabel("Primary Axis (X pixels)"); self.ax_math.set_ylabel("Secondary Axis (Y pixels)")
         self.point_on_math, = self.ax_math.plot([], [], 'o', color='magenta', markersize=10, markeredgecolor='black', zorder=10)
         self.tangent_on_math, = self.ax_math.plot([], [], color='blue', linestyle='--', linewidth=2, zorder=9)
         self.ax_math.set_aspect('equal', adjustable='box'); self.ax_math.invert_yaxis(); self.ax_math.grid(True, linestyle='--', alpha=0.6)
@@ -161,28 +166,59 @@ class InteractiveSlopeWindow(tk.Toplevel):
         current_point = splev(u_val, self.tck, der=0)
         dx_dt, dy_dt = splev(u_val, self.tck, der=1)
         cx, cy = current_point[0], current_point[1]
-        angle_deg = np.degrees(np.arctan2(dy_dt, dx_dt))
-        if abs(dx_dt) < 1e-6:
-            self.slope_var.set("Slope (dy/dx): Infinity"); self.int_slope_var.set("Integer Slope: N/A")
+        
+        # ~~~ START: NEW FIX FOR ANGLE DIRECTION ~~~
+        # Enforce that the derivative vector always points "forward" (left-to-right)
+        # on the mathematical plot. This ensures consistent angles.
+        if self.is_math_plot_rotated:
+            # For a vertical path, the primary axis is Y. 'Forward' means dY/dt > 0.
+            if dy_dt < 0:
+                dx_dt, dy_dt = -dx_dt, -dy_dt
         else:
-            slope_val = dy_dt / dx_dt
-            self.slope_var.set(f"Slope (dy/dx): {slope_val:.2f}"); self.int_slope_var.set(f"Integer Slope: {int(round(slope_val))}")
+            # For a horizontal path, the primary axis is X. 'Forward' means dX/dt > 0.
+            if dx_dt < 0:
+                dx_dt, dy_dt = -dx_dt, -dy_dt
+        # ~~~ END: NEW FIX FOR ANGLE DIRECTION ~~~
+
+        # Determine slope and angle based on the mathematical plot's orientation
+        if self.is_math_plot_rotated:
+            primary_deriv, secondary_deriv = dy_dt, dx_dt
+            slope_label_text = "Slope (dX/dY)"
+        else:
+            primary_deriv, secondary_deriv = dx_dt, dy_dt
+            slope_label_text = "Slope (dY/dX)"
+        
+        # Angle is calculated with respect to the primary (horizontal) axis of the mathematical plot
+        angle_deg = np.degrees(np.arctan2(secondary_deriv, primary_deriv))
+
+        # Calculate slope value, handling the vertical tangent case
+        if abs(primary_deriv) < 1e-6:
+            self.slope_var.set(f"{slope_label_text}: Infinity")
+            self.int_slope_var.set("Integer Slope: N/A")
+        else:
+            slope_val = secondary_deriv / primary_deriv
+            self.slope_var.set(f"{slope_label_text}: {slope_val:.2f}")
+            self.int_slope_var.set(f"Integer Slope: {int(round(slope_val))}")
+        
         self.angle_var.set(f"Angle: {angle_deg:.1f}°")
+        
+        # Tangent line visualization still uses original coordinates (dx_dt, dy_dt)
         magnitude = np.hypot(dx_dt, dy_dt)
         line_length = 50
         if magnitude > 1e-6:
             ux, uy = dx_dt / magnitude, dy_dt / magnitude
             x_coords = [cx - ux * line_length, cx + ux * line_length]; y_coords = [cy - uy * line_length, cy + uy * line_length]
         else: x_coords, y_coords = [], []
+            
+        # Update plot elements
         self.point_on_img.set_data([cx], [cy]); self.tangent_on_img.set_data(x_coords, y_coords)
         if self.is_math_plot_rotated:
             self.point_on_math.set_data([cy], [cx]); self.tangent_on_math.set_data(y_coords, x_coords)
         else:
             self.point_on_math.set_data([cx], [cy]); self.tangent_on_math.set_data(x_coords, y_coords)
         self.canvas_img.draw_idle(); self.canvas_math.draw_idle()
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# SECTION 3: THE MAIN APPLICATION
+# SECTION 3: THE MAIN APPLICATION (Unchanged)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class PathAnalyzerApp:
@@ -206,11 +242,10 @@ class PathAnalyzerApp:
         self.fig = Figure(); self.ax = self.fig.add_subplot(111); self.ax.axis('off')
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.left_pane); self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         
-        # --- FIX: Stable layout for control panel ---
         controls_frame = tk.Frame(self.right_paned_window)
         math_plot_frame = tk.Frame(self.right_paned_window)
-        self.right_paned_window.add(controls_frame, weight=0) # weight=0 makes it a fixed size
-        self.right_paned_window.add(math_plot_frame, weight=1) # weight=1 makes this expand
+        self.right_paned_window.add(controls_frame, weight=0)
+        self.right_paned_window.add(math_plot_frame, weight=1)
 
         workflow_frame = tk.LabelFrame(controls_frame, text="Workflow Steps", padx=10, pady=10)
         workflow_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
@@ -404,7 +439,7 @@ class PathAnalyzerApp:
             self.math_ax.plot(self.smooth_path_points[:, 1], self.smooth_path_points[:, 0], color='red', linewidth=2, label='Fitted Smooth Path')
             if self.displayed_nodes is not None: self.math_ax.scatter(self.displayed_nodes[:, 1], self.displayed_nodes[:, 0], c='cyan', s=20, ec='black', label='Detected Nodes')
             if self.start_node is not None: self.math_ax.scatter(self.start_node[1], self.start_node[0], c='lime', s=100, label='Start Node', ec='black')
-            self.math_ax.set_xlabel("Secondary Axis (pixels)"); self.math_ax.set_ylabel("Primary Axis (pixels)")
+            self.math_ax.set_xlabel("Primary Axis (pixels)"); self.math_ax.set_ylabel("Secondary Axis (pixels)")
         else:
             self.math_ax.plot(self.smooth_path_points[:, 0], self.smooth_path_points[:, 1], color='red', linewidth=2, label='Fitted Smooth Path')
             if self.displayed_nodes is not None: self.math_ax.scatter(self.displayed_nodes[:, 0], self.displayed_nodes[:, 1], c='cyan', s=20, ec='black', label='Detected Nodes')
@@ -431,7 +466,6 @@ class PathAnalyzerApp:
         else: messagebox.showinfo("Info", "No mask has been generated yet.")
 
     def export_path_data(self):
-        import csv
         if self.tck is None or self.u_params is None:
             messagebox.showerror("Error", "No valid smooth path has been generated yet."); return
         file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")], title="Save Path Data")
