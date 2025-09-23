@@ -34,9 +34,11 @@ Load Your Canvas (1. Load Image)
 Start by loading any standard image file. The application will display it, ready for analysis
 
 Isolate Your Subject (2. Tune Color Range...)
+
 Open the Color Tuner window. Adjust the Hue, Saturation, and Value (HSV) sliders until the path you want to analyze is perfectly highlighted in white. When you're satisfied, hit "Apply".
 
 Define the Journey (3. Analyze & Select Endpoints)
+
 This is where the magic begins. The application will process the image based on your color selection and overlay a grid of potential nodes on the detected path.
 
 First, hover and click on the node where you want your path to begin.
@@ -47,6 +49,7 @@ The application processes these points, orders the path, and fits a smooth red l
 
 
 Refine and Export (4. Export Path to CSV)
+
 Use the "Path Endpoint Control" slider to fine-tune the length of the analyzed segment.
 
 Dive into the "Interactive Slope Analysis" tool to inspect the curve's properties at any point.
@@ -60,6 +63,7 @@ Under the Hood
 
 
 This tool is a testament to the power of Python's scientific and graphical libraries.
+
 GUI: Tkinter
 
 Image Processing: OpenCV, Pillow
@@ -70,6 +74,8 @@ Plotting: Matplotlib
 
 
 How to Run
+
+
 No complex installation required. Just get the dependencies and run the script.(or just download the release binary lol)
 
 1. Prerequisites:
