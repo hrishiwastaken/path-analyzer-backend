@@ -1,146 +1,88 @@
-Path Analyzer 🚀
-
-An interactive desktop GUI application built with Python and Tkinter for extracting, smoothing, and analyzing colored paths from images.
-This tool allows users to load an image, isolate a specific color trail using an interactive HSV color tuner, and then apply a series of image processing and mathematical techniques to extract a smooth, analyzable path. The final output includes a clean spline curve, selectable nodes, and an interactive slope analysis tool.
+The Path Tracer: A Visual Toolkit for Curve Analysis
 
 
-✨ Features
+Ever looked at a winding road, a painted line, or even a crack in the pavement and thought, "I need to turn that into data"? No? Well, now you can anyway.
+
+The Path Tracer is a desktop application built for the meticulous task of extracting a 2D path from an image, smoothing it into a mathematically perfect curve, analyzing its geometric properties, and exporting it for real-world applications, like telling a robot where to go.
+
+It's part image processor, part interactive analysis tool, and part data-exporting workhorse.
 
 
-Image Loading: Supports common image formats (.jpg, .png, .bmp, etc.).
+Core Features
 
-Interactive Color Tuning: A real-time HSV color thresholding window to perfectly isolate the desired path color.
-Path Extraction: Uses morphological operations and a skeletonization algorithm to find the centerline of the colored path.
+Interactive Color-Based Path Extraction: Forget manual tracing. Use intuitive sliders to isolate any colored path in your image with a live preview. Find that perfect shade of "racetrack gray" or "garden-hose green".
 
-Spline Curve Fitting: Smooths the jagged, pixel-based path into a continuous, differentiable B-spline curve for mathematical analysis.
+Intelligent Skeletonization: The tool automatically finds the one-pixel-wide centerline of your selected path, providing a clean, raw dataset to work from. No more chunky, ambiguous lines.
 
-Node Visualization: Overlays a configurable number of nodes along the detected path on the original image.
-Interactive Slope Analysis: A dedicated window to scrub through the smoothed path, visualizing the point, its tangent line, and the precise slope and angle at that location.
+Point-and-Click Path Definition: Once the raw path is found, you are the director. Simply hover and click to define the exact start and end points of the segment you care about. The tool will intelligently order all the points in between.
 
-Dual-View Analysis: Displays the path overlaid on the original image and as a clean, rotatable 2D mathematical plot.
+Silky-Smooth Spline Fitting: Raw pixel data is noisy. The Path Tracer uses SciPy's powerful spline fitting algorithms to transform your jagged, pixelated line into a continuous, differentiable curve, perfect for calculating derivatives.
+
+Deep-Dive Slope Analysis: Launch a dedicated side-by-side analysis window. Drag a slider along your path and watch in real-time as the tangent, slope, and angle are calculated and visualized on both the original image and a clean mathematical plot. The plot even rotates intelligently to give you the most intuitive representation of slope.
+
+Robotics-Ready CSV Export: The ultimate goal. Export your smooth path as a CSV file containing a list of waypoints. Each point includes its X/Y coordinates, the distance from the previous point, and the turning angle required to get there—everything a simple vehicle controller needs to follow the path.
 
 
-🔧 Tech Stack
+
+The Grand Tour: A Step-by-Step Workflow
 
 
-Language: Python 3
+Using the Path Tracer is a straightforward, four-step process.
 
-GUI: Tkinter (via Python's standard library)
+Load Your Canvas (1. Load Image)
 
-Image Processing: OpenCV (opencv-python)
+Start by loading any standard image file. The application will display it, ready for analysis
 
-Numerical & Scientific Computing: NumPy, SciPy
+Isolate Your Subject (2. Tune Color Range...)
+Open the Color Tuner window. Adjust the Hue, Saturation, and Value (HSV) sliders until the path you want to analyze is perfectly highlighted in white. When you're satisfied, hit "Apply".
+
+Define the Journey (3. Analyze & Select Endpoints)
+This is where the magic begins. The application will process the image based on your color selection and overlay a grid of potential nodes on the detected path.
+
+First, hover and click on the node where you want your path to begin.
+
+Next, hover and click on the node where you want it to end.
+
+The application processes these points, orders the path, and fits a smooth red line through them.
+
+
+Refine and Export (4. Export Path to CSV)
+Use the "Path Endpoint Control" slider to fine-tune the length of the analyzed segment.
+
+Dive into the "Interactive Slope Analysis" tool to inspect the curve's properties at any point.
+
+Set your desired resolution using the "Export Path Resolution" slider.
+
+Finally, click "Export Path to CSV" to save the motion-control data to a file.
+
+
+Under the Hood
+
+
+This tool is a testament to the power of Python's scientific and graphical libraries.
+GUI: Tkinter
+
+Image Processing: OpenCV, Pillow
+
+Numerical & Scientific Computing: NumPy, SciPy (for that sweet spline interpolation)
 
 Plotting: Matplotlib
 
-Image I/O & Tkinter Integration: Pillow (PIL Fork)
 
+How to Run
+No complex installation required. Just get the dependencies and run the script.(or just download the release binary lol)
 
+1. Prerequisites:
 
-⚙️ Installation & Setup
-
-
-To run this application on your local machine, follow these steps.
-
-Prerequisites:
-
-Python 3.7+
-
-pip (Python package installer)
-
-Steps:
-
-
-Clone the repository:
-
-
-git clone https://github.com/your-username/path-analyzer.git
-
-cd path-analyzer
-
-Create and activate a virtual environment (recommended):
-
-# Create the environment
-
-python -m venv venv
-
-
-# Activate it (Windows)
-
-.\venv\Scripts\activate
-
-# Activate it (macOS/Linux)
-
-source venv/bin/activate
-
-Install the required dependencies:
-
-A requirements.txt file is provided for convenience.
-
-pip install -r requirements.txt
-
-(If you don't have a requirements.txt file yet, you can create one with pip freeze > requirements.txt after installing the modules below)
+Make sure you have Python and the following libraries installed. You can install them using pip:
 
 pip install opencv-python numpy scipy matplotlib Pillow
-Run the application:
 
-python path_analyzer.py
+3. Execution:
+   
+Save the code as a Python file (e.g., path_tracer.py) and run it from your terminal:
 
-
-📖 How to Use
-
-
-Load Image: Click the "Load Image" button to select an image file containing a colored path you want to analyze.
-
-Tune Color Range: Click "Tune Color Range..." to open the tuner window. Adjust the HSV sliders until the preview window shows the path isolated in white and everything else in black. Click "Apply" to save the settings.
-
-Analyze Path: Click "Analyze Path". The application will:
-
-Create a binary mask using your color settings.
-
-Clean up the mask and skeletonize it to a 1-pixel-wide line.
-
-Order the pixels to form a path.
-
-Fit a smooth B-spline curve to the path data.
-
-Explore the Results:
-
-Use the "Number of Nodes" slider to change how many points are visualized on the path.
-
-Click "Show Full Mask" to see the raw binary image used for skeletonization.
-
-Click "Interactive Slope Analysis" to open the powerful slope visualizer and inspect the curve's properties at any point.
-
-📦 Building an Executable
-
-You can package this application into a single .exe file for easy distribution on Windows, with no Python installation required on the target machine.
+python path_tracer.py
 
 
-Install PyInstaller:
-
-
-
-pip install pyinstaller
-
-Run the build command:
-
-Navigate to the project directory in your terminal and run the following command:
-
-
-pyinstaller --name PathAnalyzer --windowed --onefile your_script_name.py
-
---name PathAnalyzer: Sets the name of your final executable.
-
---windowed: Prevents a console window from appearing behind your GUI.
-
---onefile: Bundles everything into a single .exe file.
-
-Find your application:
-
-The final PathAnalyzer.exe will be located in the dist folder.
-
-
-
-📄 License
-This project is licensed under the MIT License. See the LICENSE file for details.
+Whether you're mapping a route for a small robot, analyzing biological structures, or just satisfying a deep-seated need to quantify squiggly lines, the Path Tracer is your go-to digital assistant.
