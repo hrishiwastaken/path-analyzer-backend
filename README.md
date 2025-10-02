@@ -1,94 +1,135 @@
-The Path Tracer: A Visual Toolkit for Curve Analysis
+# 🚀 Path Analyzer 9000 🚀
 
+Ever wanted to turn a squiggly line in a picture into a real-world, drivable path for your robot? Tired of manually plotting waypoints? Then welcome to the Path Analyzer 9000!
 
-Ever looked at a winding road, a painted line, or even a crack in the pavement and thought, "I need to turn that into data"? No? Well, now you can anyway.
+This tool lets you take any image with a line on it, and with a few clicks, it magically extracts that line, smooths it out, and calculates the perfect speed for every twist and turn. It then spits out a simple CSV file that your robot's controller can follow.
 
-The Path Tracer is a desktop application built for the meticulous task of extracting a 2D path from an image, smoothing it into a mathematically perfect curve, analyzing its geometric properties, and exporting it for real-world applications, like telling a robot where to go.
+## ✨ Features
 
-It's part image processor, part interactive analysis tool, and part data-exporting workhorse.
+*   **Load Any Image:** Grab a photo of a track, a drawing on paper, or chalk on the floor.
+*   **Interactive Color Tuner:** Easily isolate the path from the background with simple sliders. No need to be a Photoshop wizard!
+*   **Intelligent Path Finding:** Automatically finds the single, clean centerline of your path, whether it's thick or thin.
+*   **Click-to-Select Endpoints:** You're the boss. Just click where the path starts and ends.
+*   **Buttery-Smooth Curves:** Converts jagged pixel lines into a beautiful, mathematically perfect spline curve.
+*   **Physics-Based Speed Profiling:** Calculates the ideal speed and curvature for every point on the path based on real-world physics (like friction and G-forces). This isn't just a path, it's a *race line*!
+*   **Export to CSV:** Generates a ready-to-use `.csv` file with coordinates, speed, and curvature, perfect for feeding into your vehicle's control system.
+*   **Helpful Diagnostic Tools:** Calibrate your image scale (pixels to meters) and interactively inspect the path's slope and angle.
 
+## 🤔 The Secret Sauce: How It Works
 
-Core Features
+The magic happens in a few key steps:
 
-Interactive Color-Based Path Extraction: Forget manual tracing. Use intuitive sliders to isolate any colored path in your image with a live preview. Find that perfect shade of "racetrack gray" or "garden-hose green".
+1.  **Color Sorcery (Image Processing):** First, we convert the image to the HSV color space, which is great for isolating colors. Using the `` `Color Tuner` ``, you create a mask that highlights just your path. The app is smart enough to find the biggest colored shape and fill it in, so it doesn't matter if your line is thick or thin.
 
-Intelligent Skeletonization: The tool automatically finds the one-pixel-wide centerline of your selected path, providing a clean, raw dataset to work from. No more chunky, ambiguous lines.
+2.  **Finding the Centerline (Skeletonization):** The solid shape of your path is then put on a diet! A skeletonization algorithm whittles it down to its bare bones—a perfect, one-pixel-wide centerline. This ensures you get a single, clean path of nodes.
 
-Point-and-Click Path Definition: Once the raw path is found, you are the director. Simply hover and click to define the exact start and end points of the segment you care about. The tool will intelligently order all the points in between.
+3.  **Connecting the Dots (Pathfinding):** With a cloud of skeleton points, you click on your desired start and end. The app uses **Dijkstra's algorithm** (like a mini-GPS) to find the absolute shortest path between your two clicks, flawlessly navigating any branches or forks in the skeleton. No more weird glitches!
 
-Silky-Smooth Spline Fitting: Raw pixel data is noisy. The Path Tracer uses SciPy's powerful spline fitting algorithms to transform your jagged, pixelated line into a continuous, differentiable curve, perfect for calculating derivatives.
+4.  **Making it Smooth (Spline Interpolation):** The jagged list of pixel coordinates is transformed into a smooth, continuous curve using B-splines. This gives us a path that a real vehicle can actually follow without getting jerky.
 
-Deep-Dive Slope Analysis: Launch a dedicated side-by-side analysis window. Drag a slider along your path and watch in real-time as the tangent, slope, and angle are calculated and visualized on both the original image and a clean mathematical plot. The plot even rotates intelligently to give you the most intuitive representation of slope.
+5.  **Adding the Physics (Path Properties):** This is where the real brains are. The tool analyzes the smoothed path's geometry at every point to calculate its **curvature** (how tight a turn is). Using parameters like the coefficient of friction (`` `mu` ``), it then calculates the maximum safe speed for every single point on the path. This means your robot will automatically know to slow down for sharp corners and speed up on the straights!
 
-Robotics-Ready CSV Export: The ultimate goal. Export your smooth path as a CSV file containing a list of waypoints. Each point includes its X/Y coordinates, the distance from the previous point, and the turning angle required to get there—everything a simple vehicle controller needs to follow the path.
+## 🔧 Setup & Installation
 
+Getting started is easy. You'll need Python 3 installed.
 
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/hrishiwastaken/path-analyzer-backend.git
+    cd path-analyzer-backend
+    ```
 
-The Grand Tour: A Step-by-Step Workflow
+2.  **Create a virtual environment (recommended):**
+    ```bash
+    # For Mac/Linux
+    python3 -m venv venv
+    source venv/bin/activate
 
+    # For Windows
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
 
-Using the Path Tracer is a straightforward, four-step process.
+3.  **Install the dependencies:**
+    Create a file named `requirements.txt` in the project folder and add the following lines:
+    ```
+    opencv-python
+    numpy
+    scipy
+    matplotlib
+    Pillow
+    ```
+    Then, run this command in your terminal:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-Load Your Canvas (1. Load Image)
+4.  **Run the app!**
+    ```bash
+    python path_analyzer.py
+    ```
 
-Start by loading any standard image file. The application will display it, ready for analysis
+## 🗺️ A Step-by-Step Adventure: How to Use It
 
-Isolate Your Subject (2. Tune Color Range...)
+Follow the workflow buttons from top to bottom!
 
-Open the Color Tuner window. Adjust the Hue, Saturation, and Value (HSV) sliders until the path you want to analyze is perfectly highlighted in white. When you're satisfied, hit "Apply".
+1.  **Step 1: Load Image**
+    *   Click the `` `1. Load Image` `` button and select an image file (`.jpg`, `.png`, etc.).
 
-Define the Journey (3. Analyze & Select Endpoints)
+2.  **Step 2: Tune Color Range**
+    *   Click `` `2. Tune Color Range...` ``. A new window will pop up.
+    *   Play with the `` `H` ``, `` `S` ``, and `` `V` `` sliders until the path you want to track is **bright white** and everything else is **black**.
+    *   Click `` `Apply` `` when you're happy.
 
-This is where the magic begins. The application will process the image based on your color selection and overlay a grid of potential nodes on the detected path.
+3.  **Step 3: Calibrate Scale**
+    *   If you want your final CSV to be in real-world meters, click `` `Calibrate Pixel/Meter Scale...` ``.
+    *   Click on two points in your image (e.g., the start and end of a ruler or a known-length object).
+    *   A dialog box will ask for the real-world distance between those two points in meters. Enter it. Voilà, the app now knows how big things are!
 
-First, hover and click on the node where you want your path to begin.
+4.  **Step 4: Analyze & Select Endpoints**
+    *   Click `` `3. Analyze & Select Endpoints` ``. The app will process the image and overlay a grid of cyan nodes on the path's centerline.
+    *   The status bar will ask you to **click on the START node**. Hover over a node (it will turn yellow) and click.
+    *   The status bar will then ask you to **click on the END node**. Hover and click again.
+    *   The app will process the selection and draw the final smooth path in red.
 
-Next, hover and click on the node where you want it to end.
+5.  **Fine-Tune the Path (Optional)**
+    *   Use the **"Path Endpoint Control"** slider to shorten or lengthen the path from the end point.
+    *   Use the **"Number of Nodes to Display"** slider to change how many cyan dots you see (this is just for visualization).
 
-The application processes these points, orders the path, and fits a smooth red line through them.
+6.  **Step 5: Export Path to CSV**
+    *   Use the **"Export Path Resolution"** slider to decide how many points you want in your final CSV file (100 is a good start).
+    *   Click the big green `` `4. Export Path to CSV` `` button.
+    *   Choose a file name and location, and you're done!
 
+## 📄 The Golden Output: Your CSV File
 
-Refine and Export (4. Export Path to CSV)
+The exported CSV file is simple and ready for your robot's controller. It contains four columns:
 
-Use the "Path Endpoint Control" slider to fine-tune the length of the analyzed segment.
+| Column      | Description                                     | Unit    |
+|-------------|-------------------------------------------------|---------|
+| `` `x_m` ``       | The X-coordinate of the path point.             | meters  |
+| `` `y_m` ``       | The Y-coordinate of the path point.             | meters  |
+| `` `speed_mps` `` | The calculated maximum safe speed at that point.| m/s     |
+| `` `curvature` `` | The tightness of the curve at that point.       | 1/meter |
 
-Dive into the "Interactive Slope Analysis" tool to inspect the curve's properties at any point.
+Your robot can now read this file line by line, moving to the next `(x, y)` coordinate while aiming for the target `speed_mps`. Although it will need a seperate .cpp program to use this raw data and translate it to something dynamic to the car.
+The .cpp program for a basic car will be added here soon. For now though, you're on your own ;)
 
-Set your desired resolution using the "Export Path Resolution" slider.
+## ⚙️ Pro Tips & Tuning Knobs
 
-Finally, click "Export Path to CSV" to save the motion-control data to a file.
+Want to supercharge your path generation? You can edit the physics parameters directly in the code!
 
+In the `export_path_data` function, look for the `planning_params` dictionary:
+```python
+planning_params = {
+    'g': 9.81,          # Gravity (m/s^2)
+    'mu': 0.8,          # Coefficient of friction (e.g., 0.8 for grippy tires on asphalt)
+    'safety_factor': 0.7, # A number less than 1 to stay well below the physical limit
+    'v_max': 2.5,       # The absolute top speed of your vehicle (m/s)
+    # ... other advanced params
+}
+```
+*   **`` `mu` `` (Friction):** This is the most important one! Higher `` `mu` `` means more grip, allowing for higher speeds in corners. Lower it for slippery surfaces.
+*   **`` `v_max` `` (Max Velocity):** Set this to your robot's top speed. The calculated speeds will never exceed this value.
 
-Under the Hood
-
-
-This tool is a testament to the power of Python's scientific and graphical libraries.
-
-GUI: Tkinter
-
-Image Processing: OpenCV, Pillow
-
-Numerical & Scientific Computing: NumPy, SciPy (for that sweet spline interpolation)
-
-Plotting: Matplotlib
-
-
-How to Run
-
-
-No complex installation required. Just get the dependencies and run the script.(or just download the release binary lol)
-
-1. Prerequisites:
-
-Make sure you have Python and the following libraries installed. You can install them using pip:
-
-pip install opencv-python numpy scipy matplotlib Pillow
-
-3. Execution:
-   
-Save the code as a Python file (e.g., path_tracer.py) and run it from your terminal:
-
-python path_tracer.py
-
-
-Whether you're mapping a route for a small robot, analyzing biological structures, or just satisfying a deep-seated need to quantify squiggly lines, the Path Tracer is your go-to digital assistant.
+---
